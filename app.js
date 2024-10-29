@@ -1,35 +1,88 @@
 const express = require('express');
 const app = express();
 const port = 3000;
-// Get the client
+
+// Obtener el cliente
 const mysql = require('mysql2/promise');
 const cors = require('cors');
 
 app.use(cors());
 
+app.get('/', (req, res) => {
+    res.send('Hello World!');
+});
 
-// Create the connection to database
+// Variable para guardar guardar usuarios y contraseña, y ruta /login para el inicio de sesión
+
+app.get('/login', (req, res) => { //req = request, peticion; res = response, respuesta
+    const usuario = req.query.usuario;
+    const clave = req.query.clave;
+    if (usuario === 'admin' && clave === '1234') {
+        res.json(
+            {
+                'message': 'Bienvenido admin',
+                'logueado': true
+            }
+        )
+        res.end()
+        return
+    } else {
+        res.send('Usuario o contraseña incorrectos')
+        res.end()
+        return
+    }
+});
+
+// Crear la conexión a la base de datos
 const connection = mysql.createPool({
     host: 'localhost',
     user: 'root',
-    database: 'xexpress',
+    database: 'xexpress'
 });
 
+app.get('/register', async (req, res) => {
+    const usuario = req.query.usuario;
+    const clave = req.query.clave;
 
-async function login(req, res) {
-    
-    const datos = req.query;
-    const [filas] = await connection.query("SELECT * FROM `usuarios` WHERE `usuario` = '" + datos.usuario + "' AND `clave` = '" + datos.clave + "'");
-
-    if (filas.length == 1) {
-        res.json({ logueado: true });
-    } else {
-        res.status(401).json({ error: 'Usuario o clave incorrectos' });
+    try {
+        const [results] = await connection.query(
+            "INSERT INTO usuarios (usuario, clave) VALUES (?,?)", [usuario, clave]
+        );
+        res.send('Usuario creado');
+    } catch (err) {
+        console.log(err);
+        res.send('Error al crear el usuario');
     }
-}
+});
 
-app.get('/login', login);
+// Ruta de inicio de sesión, datos por URL
+app.get('/login', async (req, res) => {
+    const usuario = req.query.usuario;
+    const clave = req.query.clave;
 
+    try {
+        const [results] = await connection.query(
+            "SELECT * FROM usuarios WHERE usuario = ? AND clave = ?", [usuario, clave]
+        );
+
+        if (results.length === 0) {
+            return res.send('Usuario o clave incorrecta');
+        }
+
+        res.send('Inicio de sesión exitoso');
+    } catch (err) {
+        console.log(err);
+        res.send('Error al iniciar sesión');
+    }
+});
+
+app.get('/validar', (req, res) =>{
+    const datos = req.query;
+    console.log(datos);
+    res.send('Inicio sesion');
+});
+
+// Iniciar el servidor
 app.listen(port, () => {
-    console.log(`Example app listening on port ${port}`);
+    console.log(`Servidor corriendo en el puerto ${port}`);
 });
