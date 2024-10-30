@@ -90,7 +90,7 @@ app.get('/login', async (req, res) => {
 app.post('/register', async (req, res) => {
     const usuario = req.query.user;
     const clave = req.query.clave;
-    const result = await pool.query('SELECT * FROM usuarios WHERE usuario = ? AND clave = ?', [usuario, clave])
+    const [result] = await pool.query('SELECT * FROM usuarios WHERE usuario = ? AND clave = ?', [usuario, clave])
     if (result.affectRows > 0) {
         res.send('Usuario registrado correctamente')
         res.end()
