@@ -1,125 +1,113 @@
-const express = require('express');
+import express from 'express';
+
+import mysql from 'mysql2/promise';
+
+import cors from 'cors';
+
 const app = express();
 const port = 3000; // Puerto fijo, sin variables de entorno
-const mysql = require('mysql2/promise');
-const cors = require('cors');
 
 app.use(cors());
+app.use(express.json()); // Para poder parsear el cuerpo de las solicitudes JSON
 
 // Conectar a la base de datos
 const connection = mysql.createPool({
     host: 'localhost',
     user: 'root',
-    database: 'xexpress',
-    //password: '',
-    //port: 3306
+    database: 'xexpress'
 });
 
-// Ruta de registro, datos por URL
-app.get('/register', async (req, res) => {
-    const usuario = req.query.usuario;
-    const clave = req.query.clave;
+// Ruta de registro
+app.post('/register', async (req, res) => {
+    const { usuario, clave } = req.body;
+
+    if (!usuario || !clave) {
+        return res.status(400).json({ error: "El usuario y la clave son obligatorios." });
+    }
 
     try {
         const [results] = await connection.query(
-            "INSERT INTO usuarios (usuario, clave) VALUES (?,?)", [usuario, clave]
+            "INSERT INTO usuarios (usuario, clave) VALUES (?, ?)",
+            [usuario, clave]
         );
-        res.send('Usuario creado');
+        res.status(201).send('Usuario creado');
     } catch (err) {
         console.log(err);
-        res.send('Error al crear el usuario');
+        res.status(500).send('Error al crear el usuario');
     }
 });
 
-// Ruta de inicio de sesión, datos por URL
-app.get('/login', async (req, res) => {
-    const usuario = req.query.usuario;
-    const clave = req.query.clave;
+// Ruta de inicio de sesión
+app.post('/login', async (req, res) => {
+    const { usuario, clave } = req.body; // Obtenemos los datos del cuerpo de la solicitud
 
+    // Verificamos las credenciales en la base de datos
     try {
         const [results] = await connection.query(
-            "SELECT * FROM usuarios WHERE usuario = ? AND clave = ?", [usuario, clave]
-        );
-
-        if (results.length === 0) {
-            return res.send('Usuario o clave incorrecta');
-        }
-
-        res.send('Inicio de sesión exitoso');
-    } catch (err) {
-        console.log(err);
-        res.send('Error al iniciar sesión');
-    }
-});
-
-// Variable para guardar usuarios y contraseña, y ruta /login para el inicio de sesión
-app.get('/login', async (req, res) => {
-    const usuario = req.query.usuario;
-    const clave = req.query.clave;
-    const [rows] = await pool.execute('SELECT * FROM usuarios WHERE usuario = ? AND clave = ?', [usuario, clave])
-    if (rows.length > 0) {
-        res.send('Usuario y contraseña correctos')
-        res.end()
-        return
-    }
-    res.send('Usuario o contraseña incorrectos')
-    res.end()
-    return
-    /* const { usuario, clave } = req.query;
-
-    try {
-        const [results] = await pool.query(
-            "SELECT * FROM `usuarios` WHERE `usuario` = ? AND `clave` = ?",
+            "SELECT * FROM usuarios WHERE usuario = ? AND clave = ?",
             [usuario, clave]
         );
 
         if (results.length > 0) {
-            res.status(200).send('Inicio de sesión correcto');
+            res.json({
+                message: 'Usuario y contraseña correctos',
+                logueado: true
+            });
         } else {
-            res.status(401).send('Datos incorrectos');
+            res.status(401).send('Usuario o contraseña incorrectos');
         }
-
-        console.log(results); // results contiene filas retornadas por el servidor
     } catch (err) {
         console.log(err);
-        res.status(500).send('Error al conectar a la base de datos');
-    } */
-});
-
-// Cear ruta para el registro de usuarios con usuario y clave
-app.post('/register', async (req, res) => {
-    const usuario = req.query.user;
-    const clave = req.query.clave;
-    const [result] = await pool.query('SELECT * FROM usuarios WHERE usuario = ? AND clave = ?', [usuario, clave])
-    if (result.affectRows > 0) {
-        res.send('Usuario registrado correctamente')
-        res.end()
-        return
+        res.status(500).send('Error al procesar la solicitud');
     }
-    res.send('Error al registrar el usuario')
-    res.end()
-    return
-/*     pool.getConnection((err, connection) => {
-        if (err) {
-            console.log(err);
-            res.send('Error al conectar a la base de datos')
-            res.end()
-            return
-        }
-        connection.query('INSERT INTO usuarios (usuario, clave) VALUES (?,?)', [usuario, clave], (err, result) => {
-            if (err) {
-                console.log(err);
-                res.send('Error al insertar usuario en la base de datos')
-                res.end()
-                return
-            }
-            res.send('Usuario registrado correctamente')
-            res.end()
-            return
-        })
-    })*/
 });
 
+/* // Ruta para editar usuario
+app.put('/user/:id', async (req, res) => {
+    const { id } = req.params;
+    const { usuario, clave } = req.body;
+
+    if (!usuario || !clave) {
+        return res.status(400).json({ error: "El usuario y la clave son obligatorios." });
+    }
+
+    try {
+        const [results] = await connection.query(
+            "UPDATE usuarios SET usuario = ?, clave = ? WHERE id = ?",
+            [usuario, clave, id]
+        );
+        if (results.affectedRows > 0) {
+            res.send('Usuario actualizado');
+        } else {
+            res.status(404).send('Usuario no encontrado');
+        }
+    } catch (err) {
+        console.log(err);
+        res.status(500).send('Error al actualizar el usuario');
+    }
+});
+
+// Ruta para eliminar usuario
+app.delete('/user/:id', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const [results] = await connection.query(
+            "DELETE FROM usuarios WHERE id = ?",
+            [id]
+        );
+        if (results.affectedRows > 0) {
+            res.send('Usuario eliminado');
+        } else {
+            res.status(404).send('Usuario no encontrado');
+        }
+    } catch (err) {
+        console.log(err);
+        res.status(500).send('Error al eliminar el usuario');
+    }
+}); */
+
+// Ruta de validación (opcional, si la necesitas)
 app.get('/validar', (req, res) => {
     const datos = req.query;
     console.log(datos);
