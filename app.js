@@ -14,7 +14,7 @@ app.use(express.json()); // Para poder parsear el cuerpo de las solicitudes JSON
 const connection = mysql.createPool({
     host: 'localhost',
     user: 'root',
-    database: 'xexpress'
+    database: 'xexpress',
 });
 
 // Ruta de registro
