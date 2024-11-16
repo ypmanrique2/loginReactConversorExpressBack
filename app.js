@@ -62,7 +62,7 @@ app.post('/login', async (req, res) => {
     }
 });
 
-/* // Ruta para editar usuario
+// Ruta para editar usuario
 app.put('/user/:id', async (req, res) => {
     const { id } = req.params;
     const { usuario, clave } = req.body;
@@ -72,17 +72,28 @@ app.put('/user/:id', async (req, res) => {
     }
 
     try {
+        // Comprobamos si el usuario con ese ID existe
+        const [checkUser] = await connection.query(
+            "SELECT * FROM usuarios WHERE id = ?",
+            [id]
+        );
+
+        if (checkUser.length === 0) {
+            return res.status(404).send('Usuario no encontrado');
+        }
+
         const [results] = await connection.query(
             "UPDATE usuarios SET usuario = ?, clave = ? WHERE id = ?",
             [usuario, clave, id]
         );
+
         if (results.affectedRows > 0) {
             res.send('Usuario actualizado');
         } else {
             res.status(404).send('Usuario no encontrado');
         }
     } catch (err) {
-        console.log(err);
+        console.log("Error en la actualización:", err);
         res.status(500).send('Error al actualizar el usuario');
     }
 });
@@ -105,7 +116,7 @@ app.delete('/user/:id', async (req, res) => {
         console.log(err);
         res.status(500).send('Error al eliminar el usuario');
     }
-}); */
+});
 
 // Ruta de validación (opcional, si la necesitas)
 app.get('/validar', (req, res) => {

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 30-10-2024 a las 02:57:00
+-- Tiempo de generación: 04-11-2024 a las 14:56:17
 -- Versión del servidor: 10.4.32-MariaDB
 -- Versión de PHP: 8.2.12
 
@@ -44,7 +44,23 @@ INSERT INTO `usuarios` (`id`, `usuario`, `clave`) VALUES
 (5, 'kincapie', '4321'),
 (6, 'ccontreras', '1234'),
 (7, 'mmartinez', '1234'),
-(8, 'llopez', '1234');
+(8, 'llopez', '1234'),
+(9, 'ymanrique', '1234'),
+(10, 'jmanrique', '1234'),
+(13, 'ddominguez', '1234'),
+(14, 'ggonzalez', '1234'),
+(15, 'bbonifacio', '1234'),
+(16, 'jjimenez', '1234'),
+(19, 'yyasir', '1234'),
+(20, 'ccastr9o', '1234'),
+(21, 'cchia', '1234'),
+(22, 'ppera', '1234'),
+(23, 'jpabon', '1234'),
+(24, 'rreyes', '1234'),
+(25, 'dduenez', '1234'),
+(26, 'zajuna', '4321'),
+(27, 'mmaldonado', '4321'),
+(28, 'mmaldonadodhdh', '432145677');
 
 --
 -- Índices para tablas volcadas
@@ -64,7 +80,7 @@ ALTER TABLE `usuarios`
 -- AUTO_INCREMENT de la tabla `usuarios`
 --
 ALTER TABLE `usuarios`
-  MODIFY `id` int(10) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int(10) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
