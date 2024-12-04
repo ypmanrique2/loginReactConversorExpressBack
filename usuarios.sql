@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 04-11-2024 a las 14:56:17
+-- Tiempo de generación: 17-11-2024 a las 00:40:03
 -- Versión del servidor: 10.4.32-MariaDB
 -- Versión de PHP: 8.2.12
 
@@ -58,9 +58,8 @@ INSERT INTO `usuarios` (`id`, `usuario`, `clave`) VALUES
 (23, 'jpabon', '1234'),
 (24, 'rreyes', '1234'),
 (25, 'dduenez', '1234'),
-(26, 'zajuna', '4321'),
-(27, 'mmaldonado', '4321'),
-(28, 'mmaldonadodhdh', '432145677');
+(26, 'zluna', '1234'),
+(27, 'mmaldonado', '4321');
 
 --
 -- Índices para tablas volcadas
