@@ -11,7 +11,7 @@ const app = express();
 
 // Configuración de CORS
 const corsOptions = {
-    origin: 'http://localhost:5173',  // Permitir solicitudes desde el front-end
+    origin: 'https://conversorreactfrontend.onrender.com:5173',  // Permitir solicitudes desde el front-end
     methods: ['GET', 'POST', 'PUT', 'DELETE'],  // Métodos permitidos
     allowedHeaders: ['Content-Type'],  // Encabezados permitidos
 };
