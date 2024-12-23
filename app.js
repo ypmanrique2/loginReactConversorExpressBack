@@ -4,17 +4,31 @@ import mysql from 'mysql2/promise';
 
 import cors from 'cors';
 
-const app = express();
-const port = 3000; // Puerto fijo, sin variables de entorno
+import userRoutes from './userRoutes.js';
 
-app.use(cors());
-app.use(express.json()); // Para poder parsear el cuerpo de las solicitudes JSON
+const port = 3000; // Puerto fijo del back-end en xpress, sin variables de entorno
+const app = express();
+
+// Configuración de CORS
+const corsOptions = {
+    origin: 'http://localhost:5173',  // Permitir solicitudes desde el front-end
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],  // Métodos permitidos
+    allowedHeaders: ['Content-Type'],  // Encabezados permitidos
+};
+
+app.use(cors(corsOptions)); // Usar las opciones de CORS configuradas
+
+app.use(express.json()); // Para analizar JSON en el cuerpo de las solicitudes
+app.use(userRoutes);
+
 
 // Conectar a la base de datos
 const connection = mysql.createPool({
-    host: 'localhost',
-    user: 'root',
-    database: 'xexpress',
+    host: 'mysql-conversor-soy-7596.i.aivencloud.com',
+    user: 'avnadmin',
+    password: 'AVNS_QbjHj-vGWZmBnhv3u0L',
+    database: 'defaultdb',
+    port: 12655
 });
 
 // Ruta de registro
@@ -30,10 +44,10 @@ app.post('/register', async (req, res) => {
             "INSERT INTO usuarios (usuario, clave) VALUES (?, ?)",
             [usuario, clave]
         );
-        res.status(201).send('Usuario creado');
+        res.status(201).json({ message: 'Usuario creado' });
     } catch (err) {
         console.log(err);
-        res.status(500).send('Error al crear el usuario');
+        res.status(500).json({ message: 'Error al crear el usuario' });
     }
 });
 
@@ -41,7 +55,6 @@ app.post('/register', async (req, res) => {
 app.post('/login', async (req, res) => {
     const { usuario, clave } = req.body; // Obtenemos los datos del cuerpo de la solicitud
 
-    // Verificamos las credenciales en la base de datos
     try {
         const [results] = await connection.query(
             "SELECT * FROM usuarios WHERE usuario = ? AND clave = ?",
@@ -54,78 +67,24 @@ app.post('/login', async (req, res) => {
                 logueado: true
             });
         } else {
-            res.status(401).send('Usuario o contraseña incorrectos');
+            res.status(401).json('Usuario o contraseña incorrectos');
         }
     } catch (err) {
         console.log(err);
-        res.status(500).send('Error al procesar la solicitud');
+        res.status(500).json('Error al procesar la solicitud');
     }
 });
 
-// Ruta para editar usuario
-app.put('/user/:id', async (req, res) => {
-    const { id } = req.params;
-    const { usuario, clave } = req.body;
-
-    if (!usuario || !clave) {
-        return res.status(400).json({ error: "El usuario y la clave son obligatorios." });
-    }
-
-    try {
-        // Comprobamos si el usuario con ese ID existe
-        const [checkUser] = await connection.query(
-            "SELECT * FROM usuarios WHERE id = ?",
-            [id]
-        );
-
-        if (checkUser.length === 0) {
-            return res.status(404).send('Usuario no encontrado');
-        }
-
-        const [results] = await connection.query(
-            "UPDATE usuarios SET usuario = ?, clave = ? WHERE id = ?",
-            [usuario, clave, id]
-        );
-
-        if (results.affectedRows > 0) {
-            res.send('Usuario actualizado');
-        } else {
-            res.status(404).send('Usuario no encontrado');
-        }
-    } catch (err) {
-        console.log("Error en la actualización:", err);
-        res.status(500).send('Error al actualizar el usuario');
-    }
-});
-
-// Ruta para eliminar usuario
-app.delete('/user/:id', async (req, res) => {
-    const { id } = req.params;
-
-    try {
-        const [results] = await connection.query(
-            "DELETE FROM usuarios WHERE id = ?",
-            [id]
-        );
-        if (results.affectedRows > 0) {
-            res.send('Usuario eliminado');
-        } else {
-            res.status(404).send('Usuario no encontrado');
-        }
-    } catch (err) {
-        console.log(err);
-        res.status(500).send('Error al eliminar el usuario');
-    }
-});
-
-// Ruta de validación (opcional, si la necesitas)
+// Ruta de validación
 app.get('/validar', (req, res) => {
     const datos = req.query;
     console.log(datos);
-    res.send('Sesión validada');
+    res.json('Sesión validada');
 });
 
 // Iniciar el servidor
 app.listen(port, () => {
-    console.log(`El servidor está escuchando en http://localhost:${port}`);
+    console.log(`El servidor está escuchando en http://mysql-conversor-soy-7596.i.aivencloud.com:${port}`);
 });
+
+export default connection;
