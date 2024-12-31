@@ -11,7 +11,7 @@ const app = express();
 
 // Configuración de CORS
 const corsOptions = {
-    origin: 'https://conversorreactfrontend.onrender.com:5173',  // Permitir solicitudes desde el front-end
+    origin: 'https://conversor-2wqm28iz7-ypmanrique2s-projects.vercel.app:3000',  // Permitir solicitudes desde el front-end
     methods: ['GET', 'POST', 'PUT', 'DELETE'],  // Métodos permitidos
     allowedHeaders: ['Content-Type'],  // Encabezados permitidos
 };
@@ -84,7 +84,7 @@ app.get('/validar', (req, res) => {
 
 // Iniciar el servidor
 app.listen(port, () => {
-    console.log(`El servidor está escuchando en http://mysql-conversor-soy-7596.i.aivencloud.com:${port}`);
+    console.log(`El servidor está escuchando en https://conversor-2wqm28iz7-ypmanrique2s-projects.vercel.app:3000:${port}`);
 });
 
 export default connection;
