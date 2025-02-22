@@ -1,90 +1,237 @@
 import express from 'express';
 
+import fs from 'fs';
+
 import mysql from 'mysql2/promise';
 
 import cors from 'cors';
 
-import userRoutes from './userRoutes.js';
+import crypto from 'crypto';
 
-const port = 3000; // Puerto fijo del back-end en xpress, sin variables de entorno
+import session from 'express-session';
+
 const app = express();
+const port = process.env.PORT || 3000;
 
 // Configuración de CORS
 const corsOptions = {
-    origin: 'https://conversor-2wqm28iz7-ypmanrique2s-projects.vercel.app:3000',  // Permitir solicitudes desde el front-end
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],  // Métodos permitidos
-    allowedHeaders: ['Content-Type'],  // Encabezados permitidos
+    origin: ['https://vermillion-babka-8fa83b.netlify.app'], // dominio del front-end
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true, // Necesario para permitir cookies
+    preflightContinue: false,
+    sameSite: 'none',
+    optionsSuccessStatus: 204
 };
 
-app.use(cors(corsOptions)); // Usar las opciones de CORS configuradas
+app.use(cors(corsOptions));
 
-app.use(express.json()); // Para analizar JSON en el cuerpo de las solicitudes
-app.use(userRoutes);
+app.use(session({
+    secret: process.env.SECRETSESSION || 'asdf',
+    resave: false,  // No guardar la sesión si no ha cambiado
+    saveUninitialized: false,  // No guardar sesiones no inicializadas
+    proxy: true,
+    cookie: {
+        sameSite: 'none',
+        secure: true,
+        secure: process.env.NODE_ENV === 'production',
+    }
+}));
+app.set("trust proxy", 1);
 
+app.use(express.json());  // Para parsear JSON, sino funciona, escriba app.use(express.text());
+app.use(express.urlencoded({ extended: true }));  // Para parsear datos de formularios
 
-// Conectar a la base de datos
-const connection = mysql.createPool({
+const saltRounds = 10;
+
+// Conexión a Aiven
+const poolAiven = mysql.createPool({
     host: 'mysql-conversor-soy-7596.i.aivencloud.com',
+    port: 12655,
     user: 'avnadmin',
     password: 'AVNS_QbjHj-vGWZmBnhv3u0L',
     database: 'defaultdb',
-    port: 12655
+    ssl: {
+        ca: fs.readFileSync('./ca.pem'),
+    }
 });
 
-// Ruta de registro
+// Conexión a MySQL Local (XAMPP)
+const poolLocal = mysql.createPool({
+    host: 'localhost',
+    port: 3306,
+    user: 'root',
+    password: '',
+    database: 'xexpress',
+});
+
+poolAiven.getConnection()
+    .then(() => console.log("Conexión a Aiven exitosa"))
+    .catch(err => console.error("Error al conectar a Aiven:", err.message));
+
+    process.on('uncaughtException', err => {
+        console.error('Error crítico:', err);
+    });
+    process.on('unhandledRejection', err => {
+        console.error('Promesa rechazada sin manejar:', err);
+    });
+
+poolLocal.getConnection()
+    .then(() => console.log("Conexión a MySQL local exitosa"))
+    .catch(err => console.error("Error al conectar a MySQL local:", err.message));
+
+    process.on('uncaughtException', err => {
+        console.error('Error crítico:', err);
+    });
+    process.on('unhandledRejection', err => {
+        console.error('Promesa rechazada sin manejar:', err);
+    });
+
+// Ruta para registrar un nuevo usuario con clave encriptada en MD5
 app.post('/register', async (req, res) => {
-    const { usuario, clave } = req.body;
-
+    console.log("Recibiendo solicitud de registro...");
+    const { usuario, clave, rol } = req.body;
+    
     if (!usuario || !clave) {
-        return res.status(400).json({ error: "El usuario y la clave son obligatorios." });
+        return res.status(400).json({ error: 'Usuario y clave son requeridos' });
     }
 
+    // Si no se especifica un rol, se asigna "USUARIO" por defecto
+    const rolAsignado = rol || 'USUARIO';
+
     try {
-        const [results] = await connection.query(
-            "INSERT INTO usuarios (usuario, clave) VALUES (?, ?)",
-            [usuario, clave]
-        );
-        res.status(201).json({ message: 'Usuario creado' });
+        const claveMD5 = crypto.createHash('md5').update(clave).digest('hex');
+
+        await poolAiven.query('INSERT INTO usuarios (usuario, clave, rol) VALUES (?, ?, ?)', [usuario, claveMD5, rolAsignado]);
+        await poolLocal.query('INSERT INTO usuarios (usuario, clave, rol) VALUES (?, ?, ?)', [usuario, claveMD5, rolAsignado]);
+
+        return res.json({ message: 'Usuario registrado exitosamente' });
     } catch (err) {
-        console.log(err);
-        res.status(500).json({ message: 'Error al crear el usuario' });
+        console.error('Error en el registro:', err.message);
+        return res.status(500).json({ error: 'Error en la base de datos: ' + err.message });
     }
 });
 
-// Ruta de inicio de sesión
 app.post('/login', async (req, res) => {
-    const { usuario, clave } = req.body; // Obtenemos los datos del cuerpo de la solicitud
+    console.log("Recibiendo solicitud de login...");
+    const { usuario, clave } = req.body;
+    console.log("Datos recibidos:", req.body);
+    if (!usuario || !clave) {
+        return res.status(400).json({ error: 'Usuario y clave son requeridos' });
+    }
 
     try {
-        const [results] = await connection.query(
-            "SELECT * FROM usuarios WHERE usuario = ? AND clave = ?",
-            [usuario, clave]
+        const [rows] = await poolAiven.query(
+            'SELECT * FROM usuarios WHERE usuario = ?',
+            [usuario],
         );
 
-        if (results.length > 0) {
-            res.json({
-                message: 'Usuario y contraseña correctos',
-                logueado: true
-            });
-        } else {
-            res.status(401).json('Usuario o contraseña incorrectos');
+        if (rows.length > 0) {
+            const claveMD5 = crypto.createHash('md5').update(clave).digest('hex');
+            console.log("Comparando:", claveMD5, "con hash:", rows[0].clave);
+
+            if (claveMD5 === rows[0].clave) {
+                return res.json({ logueado: true, rol: rows[0].rol }); // Enviar rol al front-end
+            }
         }
+        return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
     } catch (err) {
-        console.log(err);
-        res.status(500).json('Error al procesar la solicitud');
+        console.error('Error en el inicio de sesión:', err.message);
+        return res.status(500).json({ error: 'Error en la base de datos: ' + err.message });
     }
 });
 
-// Ruta de validación
+// Verificar rol antes de editar/eliminar
+app.put('/usuario/:usuarioId', async (req, res) => {
+    console.log(`Solicitud recibida para actualizar usuario con ID: ${req.params.usuarioId}`);
+    const { usuarioId } = req.params;
+    const { usuario, clave, rol } = req.body;
+    if (rol !== 'ADMINISTRADOR') {
+        return res.status(403).json({ error: 'No autorizado' });
+    }
+    try {
+        const claveMD5 = crypto.createHash('md5').update(clave).digest('hex');
+        await poolAiven.query('UPDATE usuarios SET usuario = ?, clave = ? WHERE id = ?', [usuario, claveMD5, usuarioId]);
+        await poolLocal.query('UPDATE usuarios SET usuario = ?, clave = ? WHERE id = ?', [usuario, claveMD5, usuarioId]);
+        return res.json({ message: 'Usuario actualizado exitosamente' });
+    } catch (err) {
+        console.error('Error al actualizar el usuario:', err.message);
+        return res.status(500).json({ error: 'Error en la base de datos: ' + err.message });
+    }
+});
+
+// Ruta para que solo los administradores puedan cambiar los roles
+app.put('/usuario/:id/rol', async (req, res) => {
+    console.log("Sesión actual:", req.session); // <-- Agregar este log
+
+    const { id } = req.params;
+    const { nuevoRol } = req.body;
+
+    if (!req.session || req.session.rol !== 'ADMINISTRADOR') {
+        return res.status(403).json({ error: 'No autorizado' });
+    }
+
+    if (!['USUARIO', 'ADMINISTRADOR'].includes(nuevoRol)) {
+        return res.status(400).json({ error: 'Rol no válido' });
+    }
+
+    try {
+        await poolAiven.query('UPDATE usuarios SET rol = ? WHERE id = ?', [nuevoRol, id]);
+        await poolLocal.query('UPDATE usuarios SET rol = ? WHERE id = ?', [nuevoRol, id]);
+
+        return res.json({ message: 'Rol actualizado exitosamente' });
+    } catch (err) {
+        console.error('Error al actualizar el rol:', err.message);
+        return res.status(500).json({ error: 'Error en la base de datos: ' + err.message });
+    }
+});
+
+// Ruta para obtener la lista de usuarios
+app.get('/usuarios', async (req, res) => {
+    try {
+        const [usuarios] = await poolAiven.query('SELECT id, usuario, rol FROM usuarios');
+        res.json(usuarios);
+    } catch (err) {
+        console.error('Error al obtener usuarios:', err.message);
+        res.status(500).json({ error: 'Error en la base de datos: ' + err.message });
+    }
+});
+
+// Ruta para eliminar un usuario
+app.delete('/user/:usuarioId', async (req, res) => {
+    const { usuarioId } = req.params;
+
+    try {
+        // Verificar si el usuario existe
+        const [existingUser] = await poolAiven.query('SELECT * FROM usuarios WHERE id = ?', [usuarioId]);
+
+        if (existingUser.length === 0) {
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+
+        // Eliminar el usuario en ambas bases de datos
+        await poolAiven.query('DELETE FROM usuarios WHERE id = ?', [usuarioId]);
+        await poolLocal.query('DELETE FROM usuarios WHERE id = ?', [usuarioId]);
+
+        return res.json({ message: 'Usuario eliminado exitosamente' });
+    } catch (err) {
+        console.error('Error al eliminar el usuario:', err.message);
+        return res.status(500).json({ error: 'Error en la base de datos: ' + err.message });
+    }
+});
+
 app.get('/validar', (req, res) => {
-    const datos = req.query;
-    console.log(datos);
-    res.json('Sesión validada');
+    if (req.session && req.session.usuario) {
+        res.json({ logueado: true, rol: req.session.rol });
+    } else {
+        res.json({ logueado: false });
+    }
 });
 
 // Iniciar el servidor
 app.listen(port, () => {
-    console.log(`El servidor está escuchando en https://conversor-2wqm28iz7-ypmanrique2s-projects.vercel.app:3000:${port}`);
+
+    console.log(`Servidor corriendo en http://localhost:${port}`);
 });
 
-export default connection;
+export { poolLocal, poolAiven };
